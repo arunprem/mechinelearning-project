@@ -1,0 +1,47 @@
+pipeline {
+    agent any
+
+    environment {
+        MLFLOW_TRACKING_URI = "http://mlflow:5000"
+        MLFLOW_S3_ENDPOINT_URL = "http://minio:9000"
+        AWS_ACCESS_KEY_ID = "minioadmin"
+        AWS_SECRET_ACCESS_KEY = "minioadmin"
+    }
+
+    stages {
+
+        stage('Checkout Code') {
+            steps {
+                git branch: 'development',
+                    url: 'https://github.com/arunprem/mechinelearning-project.git'
+            }
+        }
+
+        stage('Compare New Model w/ Production') {
+            steps {
+                sh '''
+                python3 mlflow_ci/compare.py > compare_result.txt
+                '''
+            }
+        }
+
+        stage('Promote If Better') {
+            steps {
+                script {
+                    def result = readFile('compare_result.txt')
+
+                    if (result.contains("PROMOTE=YES")) {
+                        sh "python3 mlflow_ci/promote.py"
+                    } else {
+                        echo "No promotion — model not better."
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        success { echo "MLflow CI/CD Pipeline SUCCESS" }
+        failure { echo "MLflow CI/CD Pipeline FAILED" }
+    }
+}
