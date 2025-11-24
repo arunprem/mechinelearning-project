@@ -15,30 +15,32 @@ pipeline {
             }
         }
 
-        stage('Validate Python Syntax for newdas DAGs') {
+        stage('Validate Python Syntax') {
             steps {
-                echo "Validating DAG Python files in newdas/dags..."
+                echo "Validating DAG Python files..."
                 sh '''
                 if command -v python3 >/dev/null 2>&1; then
-                    python3 -m py_compile newdas/dags/*.py
+                    python3 -m py_compile newdags/dags/*.py
                 else
-                    echo "Python3 not found → skipping syntax validation"
+                    echo "Python3 not available → skipping syntax validation"
                 fi
                 '''
             }
         }
 
-        stage('Deploy newdas DAGs to Airflow') {
+        stage('Deploy DAGs to Airflow') {
             steps {
-                echo "Deploying DAGs from newdas/dags to Airflow DAG folder..."
+                echo "Deploying DAGs into Airflow DAG folder..."
                 sh '''
                 mkdir -p ${AIRFLOW_DAG_FOLDER}
 
+                # Remove old DAGs
                 rm -f ${AIRFLOW_DAG_FOLDER}/*.py
 
-                cp newdas/dags/*.py ${AIRFLOW_DAG_FOLDER}/
+                # Copy new DAGs from newdags/dags
+                cp newdags/dags/*.py ${AIRFLOW_DAG_FOLDER}/
 
-                echo "Deployment completed successfully!"
+                echo "🚀 DAG deployment completed successfully!"
                 '''
             }
         }
@@ -46,11 +48,10 @@ pipeline {
 
     post {
         success {
-            echo "✅ DAG CI/CD Pipeline SUCCESS — Airflow will refresh in ~30 seconds."
+            echo "✅ DAG CI/CD SUCCESS — Airflow will refresh soon."
         }
         failure {
-            echo "❌ DAG CI/CD Pipeline FAILED — Check Jenkins console logs."
+            echo "❌ DAG CI/CD FAILED — Check Jenkins logs."
         }
     }
 }
-
