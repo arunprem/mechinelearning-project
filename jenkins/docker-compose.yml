@@ -5,15 +5,28 @@ services:
     image: jenkins/jenkins:lts
     container_name: jenkins
     restart: always
+
+    # Run Jenkins as root (required for macOS volume mounts)
     user: root
+
+    # Fix permission issues with macOS volume UID/GID = 1000
+    group_add:
+      - 1000
+
     ports:
       - "8081:8080"      # Jenkins UI
       - "50000:50000"    # Jenkins agent port
+
     volumes:
+      # Jenkins home directory (persistent)
       - jenkins_home:/var/jenkins_home
-      - /var/run/docker.sock:/var/run/docker.sock  # allow Jenkins to run docker
-      # 🔥 Mount your Airflow DAG folder from host to Jenkins container
+
+      # Allow Jenkins to use host Docker engine
+      - /var/run/docker.sock:/var/run/docker.sock
+
+      # Mount Airflow DAG directory so Jenkins can deploy DAGs
       - /Volumes/Development/mechinelearning-project/fir-mlops/airflow/dags:/airflow-dags
+      # Jenkins will copy DAGs to this folder using CI/CD pipeline
 
 volumes:
   jenkins_home:

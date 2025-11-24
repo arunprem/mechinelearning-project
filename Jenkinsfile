@@ -11,7 +11,7 @@ pipeline {
             steps {
                 echo "Pulling code from development branch..."
                 git branch: 'development',
-                    url: 'https://github.com/<your-repo>.git'
+                    url: 'https://github.com/arunprem/mechinelearning-project.git'
             }
         }
 
