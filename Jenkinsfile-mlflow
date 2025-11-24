@@ -20,7 +20,7 @@ pipeline {
         stage('Compare New Model w/ Production') {
             steps {
                 sh '''
-                python3 mlflow_ci/compare.py > compare_result.txt
+                python3 ${WORKSPACE}/mlflow_ci/compare.py > compare_result.txt
                 '''
             }
         }
@@ -31,7 +31,7 @@ pipeline {
                     def result = readFile('compare_result.txt')
 
                     if (result.contains("PROMOTE=YES")) {
-                        sh "python3 mlflow_ci/promote.py"
+                        sh "python3 ${WORKSPACE}/mlflow_ci/promote.py"
                     } else {
                         echo "No promotion — model not better."
                     }
