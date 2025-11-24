@@ -1,0 +1,19 @@
+version: "3.9"
+
+services:
+  jenkins:
+    image: jenkins/jenkins:lts
+    container_name: jenkins
+    restart: always
+    user: root
+    ports:
+      - "8081:8080"      # Jenkins UI
+      - "50000:50000"    # Jenkins agent port
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock  # allow Jenkins to run docker
+      # 🔥 Mount your Airflow DAG folder from host to Jenkins container
+      - /Volumes/Development/mechinelearning-project/fir-mlops/airflow/dags:/airflow-dags
+
+volumes:
+  jenkins_home:

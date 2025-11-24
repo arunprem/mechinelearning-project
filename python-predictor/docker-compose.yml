@@ -1,0 +1,11 @@
+version: "3.9"
+
+services:
+  predictor:
+    build: .
+    container_name: python-predictor
+    restart: always
+    environment:
+      MLFLOW_URI: "http://host.docker.internal:5000"
+    ports:
+      - "8000:8000"

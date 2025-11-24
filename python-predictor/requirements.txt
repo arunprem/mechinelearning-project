@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+mlflow
+pydantic
+numpy
+pandas
+scikit-learn
+boto3
+joblib
