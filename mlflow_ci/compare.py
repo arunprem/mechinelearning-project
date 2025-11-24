@@ -12,53 +12,55 @@ client = MlflowClient(tracking_uri=MLFLOW_TRACKING_URI)
 print("🔍 Checking MLflow model registry...")
 
 # -----------------------------------------
-# Step 1 — Check if model exists
+# Step 1 — Check if model exists (MLflow 3.x compatible)
 # -----------------------------------------
-models = [m.name for m in client.list_registered_models()]
+registered = client.search_registered_models(filter_string=f"name = '{MODEL_NAME}'")
 
-if MODEL_NAME not in models:
+if len(registered) == 0:
     print(f"⚠️ No model named '{MODEL_NAME}' found in MLflow registry.")
     print("➡️ Registering FIRST model automatically...")
 
-    # Get last run
     runs = mlflow.search_runs(order_by=["start_time DESC"], max_results=1)
     if runs.empty:
-        print("❌ No MLflow runs found! Train a model first.")
+        print("❌ No MLflow runs found! Run the Airflow training DAG first.")
         sys.exit(1)
 
     latest_run_id = runs.iloc[0]["run_id"]
 
-    # Register it
     model_uri = f"runs:/{latest_run_id}/fir_prediction_model"
     result = mlflow.register_model(model_uri, MODEL_NAME)
 
     print(f"✅ First model registered with version: {result.version}")
 
-    # Save comparison result for Jenkins
     with open("compare_result.txt", "w") as f:
         f.write("FIRST_MODEL_REGISTERED")
 
     sys.exit(0)
 
 # -----------------------------------------
-# Step 2 — If model exists → compare accuracy
+# Step 2 — Compare new vs production
 # -----------------------------------------
 print("📘 Existing model found. Comparing accuracies...")
 
-# Latest production or staging model
-prod = client.get_latest_versions(MODEL_NAME, stages=["Production", "Staging", "None"])
+# MLflow 3.x: get latest versions
+versions = client.search_model_versions(f"name='{MODEL_NAME}'")
 
-if len(prod) == 0:
-    print("⚠️ No existing model versions found. Registering the first one.")
-    sys.exit(0)
+# Find production or staging version
+prod_version = None
+for v in versions:
+    if v.current_stage in ["Production", "Staging"]:
+        prod_version = v
 
-prod_model = prod[0]
-prod_run = client.get_run(prod_model.run_id)
-prod_acc = float(prod_run.data.metrics.get("accuracy", 0))
+if prod_version:
+    prod_run_id = prod_version.run_id
+    prod_run = client.get_run(prod_run_id)
+    prod_acc = float(prod_run.data.metrics.get("accuracy", 0))
+else:
+    prod_acc = 0
 
-print(f"Current production/staging accuracy: {prod_acc}")
+print(f"Current Production/Staging accuracy: {prod_acc}")
 
-# Get the last trained run
+# Latest run = new model training
 new_run = mlflow.search_runs(order_by=["start_time DESC"], max_results=1)
 new_run_id = new_run.iloc[0]["run_id"]
 new_acc = float(new_run.iloc[0]["metrics.accuracy"])
@@ -70,4 +72,4 @@ decision = "PROMOTE" if new_acc > prod_acc else "KEEP_OLD"
 with open("compare_result.txt", "w") as f:
     f.write(decision)
 
-print(f"📌 Comparison result saved: {decision}")
+print(f"📌 Comparison decision saved: {decision}")
