@@ -1,9 +1,7 @@
-version: "3.9"
-
 services:
   jenkins:
     build:
-      context: .                 # Jenkins folder
+      context: .
       dockerfile: Dockerfile
 
     container_name: jenkins
@@ -14,24 +12,27 @@ services:
       - 1000
 
     ports:
-      - "8081:8080"              # Jenkins UI
-      - "50000:50000"            # Agent port
+      - "8081:8080"      # Jenkins UI
+      - "50000:50000"    # Agent port
+
+    environment:
+      # MLflow Tracking Server URL
+      MLFLOW_URI: "http://host.docker.internal:5000"
 
     volumes:
-      # Jenkins persistent storage
+      # Persistent Jenkins data
       - jenkins_home:/var/jenkins_home
 
-      # Use host Docker engine
+      # Allow Jenkins to execute docker commands
       - /var/run/docker.sock:/var/run/docker.sock
 
-      # ----------------------------------------------------------
-      #  AIRFLOW DAG MOUNT (This replaces your old absolute path)
-      # ----------------------------------------------------------
+      # ---------------------------------------------
+      #  Airflow DAGs mount (relative safe mapping)
+      # ---------------------------------------------
       - ../fir-mlops/airflow/dags:/airflow-dags
-      #       ^ Go OUT of jenkins folder
-      #          then into fir-mlops/airflow/dags
-      # Resulting absolute path:
+      # This maps to:
       # /Volumes/Development/mechinelearning-project/fir-mlops/airflow/dags
 
 volumes:
   jenkins_home:
+    name: jenkins_home
