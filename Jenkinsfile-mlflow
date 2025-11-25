@@ -20,7 +20,15 @@ pipeline {
         stage('Compare New Model w/ Production') {
             steps {
                 sh '''
-                python3 ${WORKSPACE}/mlflow_ci/compare.py > compare_result.txt
+                    echo "=== 🧪 Running MLflow Model Comparison ==="
+                    echo "Workspace: ${WORKSPACE}"
+                    echo "Running: python3 ${WORKSPACE}/mlflow_ci/compare.py"
+
+                    python3 "${WORKSPACE}/mlflow_ci/compare.py"
+
+                    echo "=== Comparison Finished ==="
+                    echo "Result file content:"
+                    cat compare_result.txt
                 '''
             }
         }
@@ -28,12 +36,14 @@ pipeline {
         stage('Promote If Better') {
             steps {
                 script {
-                    def result = readFile('compare_result.txt')
+                    def decision = readFile('compare_result.txt').trim()
+                    echo "COMPARE_RESULT: ${decision}"
 
-                    if (result.contains("PROMOTE=YES")) {
-                        sh "python3 ${WORKSPACE}/mlflow_ci/promote.py"
+                    if (decision == "PROMOTE") {
+                        echo "🚀 PROMOTING MODEL..."
+                        sh "python3 \"${WORKSPACE}/mlflow_ci/promote.py\""
                     } else {
-                        echo "No promotion — model not better."
+                        echo "⚠️ Keeping old model — new model is not better."
                     }
                 }
             }
@@ -41,7 +51,7 @@ pipeline {
     }
 
     post {
-        success { echo "MLflow CI/CD Pipeline SUCCESS" }
-        failure { echo "MLflow CI/CD Pipeline FAILED" }
+        success { echo "🎉 MLflow CI/CD Pipeline SUCCESS" }
+        failure { echo "❌ MLflow CI/CD Pipeline FAILED" }
     }
 }
